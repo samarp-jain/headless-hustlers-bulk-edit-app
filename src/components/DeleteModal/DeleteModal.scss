@@ -1,0 +1,37 @@
+@import "src/scss";
+
+.delete-dialog-modal {
+  .delete-dialog-message {
+    margin-bottom: $space-20;
+  }
+
+  p {
+    margin-bottom: $space-16;
+    color: $color-black-333;
+    font-size: $size-font-small;
+  }
+
+  .mb-20 {
+    margin-bottom: $space-20;
+  }
+  .delete-input-textbox {
+    margin-top: $space-20;
+  }
+}
+
+.cs-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-8;
+}
+
+.cs-text-input {
+  width: 100%;
+  max-width: $px-300;
+}
+
+.remove-modal-icon {
+  & circle {
+    fill: $color-black-d62400 !important;
+  }
+}

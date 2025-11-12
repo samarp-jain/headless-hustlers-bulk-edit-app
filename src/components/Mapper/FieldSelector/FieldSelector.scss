@@ -1,0 +1,28 @@
+@import "src/scss";
+
+.field-selector-select {
+  width: $px-400 !important;
+  & .Select__menu {
+    width: $px-300;
+    & .Select__menu-list {
+      & .Checkbox .Checkbox__label.Checkbox--select-fullWidth {
+        width: $px-200 !important;
+      }
+    }
+  }
+}
+
+.field-selector-select-wrapper {
+  margin-left: $space-8;
+}
+
+.select-all-checkbox-wrapper {
+  margin-bottom: $space-8;
+  display: flex;
+  align-items: center;
+  & .select-all-checkbox-label {
+    font-weight: 500;
+    line-height: 20px;
+    padding-left: 10px;
+  }
+}

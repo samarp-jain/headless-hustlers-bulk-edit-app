@@ -1,0 +1,306 @@
+.editable-cell-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0;
+
+  .truncate-content {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+
+  .boolean-display {
+    display: flex;
+    align-items: center;
+
+    .boolean-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  &.editable {
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.03);
+
+      .editable-indicator {
+        opacity: 1;
+      }
+    }
+  }
+
+  .editable-indicator {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    padding: 2px 4px;
+    font-size: 10px;
+    color: #647696;
+    background-color: #f5f7f9;
+    border-radius: 2px;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+
+    .edit-hint {
+      font-style: italic;
+      white-space: nowrap;
+    }
+  }
+}
+
+.editable-cell-editor {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background-color: #fff;
+  border: 2px solid #6366f1;
+  border-radius: 4px;
+  box-sizing: border-box;
+
+  .editable-cell-textarea {
+    width: 100%;
+    min-height: 60px;
+    max-height: 100px;
+    margin-bottom: 8px;
+    resize: none;
+    font-size: 13px;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+  }
+
+  .editable-cell-boolean {
+    width: 100%;
+    margin-bottom: 8px;
+
+    .boolean-toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px;
+      background-color: #f9fafb;
+      border-radius: 4px;
+
+      .toggle-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        min-width: 50px;
+      }
+    }
+  }
+
+  .editable-cell-date {
+    width: 100%;
+    margin-bottom: 8px;
+
+    .date-display-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .date-display-input {
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 13px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        background-color: #f9fafb;
+        color: #374151;
+        cursor: default;
+
+        &::placeholder {
+          color: #9ca3af;
+        }
+      }
+
+      .date-picker-btn {
+        width: 100%;
+        font-size: 13px !important;
+        height: 36px !important;
+      }
+    }
+  }
+
+  .editable-cell-select {
+    width: 100%;
+    margin-bottom: 8px;
+
+    :global {
+      .Select__control {
+        min-height: 36px;
+        font-size: 13px;
+      }
+
+      .Select__menu {
+        z-index: 9999 !important;
+      }
+    }
+  }
+
+  .editable-cell-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-top: auto;
+
+    .cancel-btn,
+    .update-btn {
+      font-size: 11px !important;
+      padding: 4px 10px !important;
+      height: 26px !important;
+      min-width: 60px !important;
+      max-width: 80px !important;
+      white-space: nowrap;
+      line-height: 1.2;
+      border-radius: 3px;
+
+      span {
+        font-size: 11px !important;
+      }
+
+      svg {
+        display: none;
+      }
+    }
+
+    .cancel-btn {
+      background-color: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+
+      &:hover {
+        background-color: #e5e7eb;
+      }
+    }
+
+    .update-btn {
+      background-color: #6366f1;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background-color: #4f46e5;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// Date Picker Modal Styles
+:global {
+  .date-picker-modal {
+    .date-picker-modal-body {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      .date-picker-modal-content {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+
+        .DateTimePicker {
+          width: 100%;
+
+          .react-datepicker {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-family: inherit;
+          }
+
+          .react-datepicker__header {
+            background-color: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 0;
+          }
+
+          .react-datepicker__current-month {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+          }
+
+          .react-datepicker__day-name,
+          .react-datepicker__day {
+            width: 36px;
+            line-height: 36px;
+            margin: 4px;
+          }
+
+          .react-datepicker__day--selected,
+          .react-datepicker__day--keyboard-selected {
+            background-color: #4f46e5;
+            color: white;
+            border-radius: 50%;
+
+            &:hover {
+              background-color: #4338ca;
+            }
+          }
+
+          .react-datepicker__day:hover {
+            background-color: #f3f4f6;
+            border-radius: 50%;
+          }
+
+          .react-datepicker__time-container {
+            border-left: 1px solid #e5e7eb;
+          }
+
+          .react-datepicker__time-list-item--selected {
+            background-color: #4f46e5 !important;
+            color: white !important;
+
+            &:hover {
+              background-color: #4338ca !important;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive adjustments for smaller columns
+@media (max-width: 300px) {
+  .editable-cell-editor {
+    .editable-cell-actions {
+      .cancel-btn,
+      .update-btn {
+        font-size: 10px !important;
+        padding: 3px 8px !important;
+        min-width: 50px !important;
+        max-width: 70px !important;
+      }
+    }
+  }
+}
