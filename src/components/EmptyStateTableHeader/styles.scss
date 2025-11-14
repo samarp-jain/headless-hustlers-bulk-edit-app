@@ -1,0 +1,20 @@
+.EmptyStateWrapper {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  .empty-state {
+    img {
+      margin-bottom: 1rem;
+      width: 200px;
+    }
+
+    p {
+      color: #333;
+      font-size: 1rem;
+      font-weight: 400;
+      line-height: 1.4rem;
+    }
+  }
+}

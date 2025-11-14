@@ -399,3 +399,111 @@ $shadow-color: $color-black-0000001f;
   font-size: 14px;
   border: 1px dashed #e0e0e0;
 }
+
+// Link field styles
+.link-field-display {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+
+  .link-field-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .link-field-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .link-field-value {
+      font-size: 14px;
+      color: #111827;
+      padding: 8px 12px;
+      background-color: #ffffff;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      word-break: break-all;
+    }
+  }
+
+  .edit-button {
+    align-self: flex-start;
+    margin-top: 8px;
+  }
+}
+
+.link-field-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+
+  .link-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .link-field-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+
+    .field-edit-input {
+      width: 100%;
+      font-size: 14px;
+
+      textarea {
+        min-height: 60px;
+        resize: vertical;
+      }
+    }
+  }
+
+  .field-edit-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+}
+
+// Text field display styles
+.text-field-display {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .text-field-value {
+    padding: 16px;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-family: "Inter", sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #374151;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .edit-button {
+    align-self: flex-start;
+  }
+}

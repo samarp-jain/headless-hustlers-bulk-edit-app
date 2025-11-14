@@ -1,0 +1,120 @@
+.formCustomAdd {
+  margin-left: 20px;
+}
+
+// Utility classes for flex alignment
+.flex-v-center {
+  display: flex;
+  align-items: center;
+}
+
+.flex-h-center {
+  display: flex;
+  justify-content: center;
+}
+
+.mt-8 {
+  margin-top: 0.5rem;
+}
+
+.mb-8 {
+  margin-bottom: 0.5rem;
+}
+
+.ml-20 {
+  margin-left: 1.25rem;
+}
+
+.InlineForms {
+  align-items: center;
+  display: flex;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-left: 5px;
+
+  &__plus-icon {
+    background-color: #f7f8fc;
+    border-radius: 50%;
+    cursor: pointer;
+    height: 2.5rem;
+    width: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    svg {
+      width: 1.75rem;
+      height: 1.75rem;
+      color: #6c5ce7;
+    }
+  }
+
+  &__add-text {
+    color: #6c5ce7;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-left: 0.75rem;
+    flex: 1;
+  }
+
+  &__input-container {
+    margin: 0 1rem;
+    width: calc(22% - 5.5rem);
+
+    .InlineForms__name-input {
+      width: 100%;
+      background-color: #ffffff;
+      border-radius: 2px;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+
+      &:focus {
+        border-color: #6c5ce7;
+        box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+      }
+
+      &::placeholder {
+        color: #a0aec0;
+      }
+    }
+  }
+
+  &__icon-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  &__cancel-icon,
+  &__save-icon {
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    transition: background-color 0.2s ease;
+
+    svg {
+      width: 2.65rem;
+      height: 2.65rem;
+    }
+  }
+
+  &--disable {
+    svg {
+      circle {
+        fill: #edf1f7;
+      }
+    }
+  }
+}

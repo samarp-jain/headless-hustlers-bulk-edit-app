@@ -65,6 +65,7 @@ const FullPageExtension: React.FC = () => {
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
   const [referenceData, setReferenceData] = useState<any>(null);
   const [allLocalesData, setAllLocalesData] = useState<Record<string, any>>({});
+  const [contentTypeSchema, setContentTypeSchema] = useState<any[]>([]);
 
   const [venusData, setVenusData] = useState<any[]>([]);
   const [viewBy, setViewBy] = useState<string>("Comfort");
@@ -75,6 +76,7 @@ const FullPageExtension: React.FC = () => {
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isBulkUpdating, setIsBulkUpdating] = useState<boolean>(false);
 
   const [tableHeight, setTableHeight] = useState<number>(window.innerHeight - 250);
 
@@ -97,6 +99,47 @@ const FullPageExtension: React.FC = () => {
     fetchEnvironments();
   }, [appSdk?.stack]);
 
+  // Function to get data type from schema by field name
+  const getDataTypeFromSchema = useCallback((fieldName: string, schema: any[]): string | null => {
+    if (!schema || !Array.isArray(schema) || schema.length === 0) {
+      console.log(`[Schema Lookup] No schema available for field: ${fieldName}`);
+      return null;
+    }
+
+    // Search through schema recursively
+    const searchSchema = (schemaArray: any[], fieldUid: string): string | null => {
+      for (const field of schemaArray) {
+        if (field.uid === fieldUid) {
+          console.log(`[Schema Lookup] ✓ Found field "${fieldUid}" with data_type: ${field.data_type}`);
+          return field.data_type;
+        }
+
+        // Search in nested schema (for groups)
+        if (field.schema && Array.isArray(field.schema)) {
+          const result = searchSchema(field.schema, fieldUid);
+          if (result) return result;
+        }
+
+        // Search in blocks
+        if (field.blocks && Array.isArray(field.blocks)) {
+          for (const block of field.blocks) {
+            if (block.schema && Array.isArray(block.schema)) {
+              const result = searchSchema(block.schema, fieldUid);
+              if (result) return result;
+            }
+          }
+        }
+      }
+      return null;
+    };
+
+    const result = searchSchema(schema, fieldName);
+    if (!result) {
+      console.log(`[Schema Lookup] ✗ Field "${fieldName}" not found in schema`);
+    }
+    return result;
+  }, []);
+
   const refreshTableData = async (preserveSelection: boolean = false) => {
     if (!selectedContentType) return;
 
@@ -113,7 +156,8 @@ const FullPageExtension: React.FC = () => {
         setData,
         setReferenceData,
         setLoading,
-        defaultLocale
+        defaultLocale,
+        setContentTypeSchema
       );
       if (preserveSelection) {
         setRowSelectionModel(currentSelectedRows);
@@ -195,61 +239,40 @@ const FullPageExtension: React.FC = () => {
     setEditedValue(null);
   };
 
-  const renderCellContent = useCallback((content: any, fieldType: string, fieldConfig: any) => {
-    if (!content) return "";
+  const renderCellContent = useCallback(
+    (content: any, fieldType: string, fieldConfig: any, fieldName?: string) => {
+      if (!content) return "";
 
-    if (fieldType === "array" && Array.isArray(content)) {
-      return (
-        <div className="array-value">
-          <span className="badge">{content?.length}</span>
-          <span className="array-preview">{content?.join?.(", ")}</span>
-        </div>
-      );
-    }
-
-    if (
-      Array?.isArray(content) &&
-      content?.length > 0 &&
-      content?.every?.(
-        (item) =>
-          typeof item === localeTexts?.FullPage?.constants?.object &&
-          item !== null &&
-          item?.uid &&
-          item?._content_type_uid
-      )
-    ) {
-      return (
-        <div className="reference-field-cell">
-          <div className="reference-preview">
-            <div className="reference-content">
-              <Icon icon="Link" size="small" />
-              <span>
-                {content?.length}{" "}
-                {content?.length === 1
-                  ? localeTexts?.FullPage?.constants?.referenceText?.Reference
-                  : localeTexts?.FullPage?.constants?.referenceText?.References}
-              </span>
-            </div>
+      if (fieldType === "array" && Array.isArray(content)) {
+        return (
+          <div className="array-value">
+            <span className="badge">{content?.length}</span>
+            <span className="array-preview">{content?.join?.(", ")}</span>
           </div>
-        </div>
-      );
-    }
+        );
+      }
 
-    if (fieldType === localeTexts?.FullPage?.constants?.referenceText?.reference) {
-      if (Array.isArray(content)) {
-        const referenceCount = content.filter(
-          (item) => typeof item === localeTexts?.FullPage?.constants?.object && item !== null
-        ).length;
+      if (
+        Array?.isArray(content) &&
+        content?.length > 0 &&
+        content?.every?.(
+          (item) =>
+            typeof item === localeTexts?.FullPage?.constants?.object &&
+            item !== null &&
+            item?.uid &&
+            item?._content_type_uid
+        )
+      ) {
         return (
           <div className="reference-field-cell">
             <div className="reference-preview">
               <div className="reference-content">
                 <Icon icon="Link" size="small" />
                 <span>
-                  {referenceCount}{" "}
-                  {referenceCount === 1
-                    ? localeTexts?.FullPage?.constants?.referenceText?.referenceField
-                    : localeTexts?.FullPage?.constants?.referenceText?.referenceFields}
+                  {content?.length}{" "}
+                  {content?.length === 1
+                    ? localeTexts?.FullPage?.constants?.referenceText?.Reference
+                    : localeTexts?.FullPage?.constants?.referenceText?.References}
                 </span>
               </div>
             </div>
@@ -257,7 +280,40 @@ const FullPageExtension: React.FC = () => {
         );
       }
 
-      if (typeof content === localeTexts?.FullPage?.constants?.object && content !== null) {
+      if (fieldType === localeTexts?.FullPage?.constants?.referenceText?.reference) {
+        if (Array.isArray(content)) {
+          const referenceCount = content.filter(
+            (item) => typeof item === localeTexts?.FullPage?.constants?.object && item !== null
+          ).length;
+          return (
+            <div className="reference-field-cell">
+              <div className="reference-preview">
+                <div className="reference-content">
+                  <Icon icon="Link" size="small" />
+                  <span>
+                    {referenceCount}{" "}
+                    {referenceCount === 1
+                      ? localeTexts?.FullPage?.constants?.referenceText?.referenceField
+                      : localeTexts?.FullPage?.constants?.referenceText?.referenceFields}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (typeof content === localeTexts?.FullPage?.constants?.object && content !== null) {
+          return (
+            <div className="reference-field-cell">
+              <div className="reference-preview">
+                <div className="reference-content">
+                  <Icon icon="Link" size="small" />
+                  <span>1 {localeTexts?.FullPage?.constants?.referenceText?.Reference}</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="reference-field-cell">
             <div className="reference-preview">
@@ -269,74 +325,137 @@ const FullPageExtension: React.FC = () => {
           </div>
         );
       }
-      return (
-        <div className="reference-field-cell">
-          <div className="reference-preview">
-            <div className="reference-content">
-              <Icon icon="Link" size="small" />
-              <span>1 {localeTexts?.FullPage?.constants?.referenceText?.Reference}</span>
+
+      if (fieldType === localeTexts?.FullPage?.constants?.groupText?.group) {
+        const fieldCount = Object?.keys(content || {})?.length;
+        return (
+          <div className="nested-field-cell">
+            <div className="nested-field-preview">
+              <div className="nested-field-info">
+                <span className="field-type">{localeTexts?.FullPage?.constants?.groupText?.Group}</span>
+                <span className="field-count">
+                  {fieldCount}{" "}
+                  {fieldCount === 1
+                    ? localeTexts?.FullPage?.constants?.field
+                    : localeTexts?.FullPage?.constants?.fields}
+                  <Icon version="v2" icon="v2-CaretRight" className="preview-arrow" />
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      );
-    }
+        );
+      }
 
-    if (fieldType === localeTexts?.FullPage?.constants?.groupText?.group) {
-      const fieldCount = Object?.keys(content || {})?.length;
-      return (
-        <div className="nested-field-cell">
-          <div className="nested-field-preview">
-            <div className="nested-field-info">
-              <span className="field-type">{localeTexts?.FullPage?.constants?.groupText?.Group}</span>
-              <span className="field-count">
-                {fieldCount}{" "}
-                {fieldCount === 1 ? localeTexts?.FullPage?.constants?.field : localeTexts?.FullPage?.constants?.fields}
-                <Icon version="v2" icon="v2-CaretRight" className="preview-arrow" />
-              </span>
+      if (fieldType === localeTexts?.FullPage?.constants?.blockText?.blocks) {
+        const blockCount = (content || [])?.length;
+        return (
+          <div className="nested-field-cell">
+            <div className="nested-field-preview">
+              <Icon version="v2" icon="v2-ModularBlocks" size="small" />
+              <div className="nested-field-info">
+                <span className="field-count">
+                  {blockCount}{" "}
+                  {blockCount === 1
+                    ? localeTexts?.FullPage?.constants?.blockText?.block
+                    : localeTexts?.FullPage?.constants?.blockText?.blocks}
+                </span>
+              </div>
+              <Icon version="v2" icon="v2-CaretRight" size="small" />
             </div>
           </div>
-        </div>
-      );
-    }
+        );
+      }
 
-    if (fieldType === localeTexts?.FullPage?.constants?.blockText?.blocks) {
-      const blockCount = (content || [])?.length;
-      return (
-        <div className="nested-field-cell">
-          <div className="nested-field-preview">
-            <Icon version="v2" icon="v2-ModularBlocks" size="small" />
-            <div className="nested-field-info">
-              <span className="field-count">
-                {blockCount}{" "}
-                {blockCount === 1
-                  ? localeTexts?.FullPage?.constants?.blockText?.block
-                  : localeTexts?.FullPage?.constants?.blockText?.blocks}
-              </span>
+      // Check if this field is a link type by comparing with schema
+      const schemaDataType = fieldName ? getDataTypeFromSchema(fieldName, contentTypeSchema) : null;
+
+      if (schemaDataType === "link") {
+        if (content && typeof content === "object" && content !== null) {
+          const title = content?.title || "";
+          const href = content?.href || content?.url || "";
+          const hasContent = title || href;
+
+          return (
+            <div className="link-field-cell">
+              <div className="link-field-preview">
+                <Icon version="v2" icon="Link" size="small" className="link-icon" />
+                <div className="link-field-content">
+                  {hasContent ? (
+                    <>
+                      {title && (
+                        <div className="link-field-row">
+                          <span className="link-label">Title:</span>
+                          <span className="link-value">{title}</span>
+                        </div>
+                      )}
+                      {href && (
+                        <div className="link-field-row">
+                          <span className="link-label">URL:</span>
+                          <span className="link-value">{href}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span className="link-empty">Empty Link</span>
+                  )}
+                </div>
+                <Icon version="v2" icon="v2-CaretRight" size="small" className="link-arrow" />
+              </div>
             </div>
-            <Icon version="v2" icon="v2-CaretRight" size="small" />
+          );
+        }
+        return (
+          <div className="link-field-cell">
+            <div className="link-field-preview">
+              <Icon version="v2" icon="Link" size="small" />
+              <span className="link-empty">Empty Link</span>
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
+
+      // Check for long text that should open in modal
+      if (typeof content === "string" && (content.length > 100 || content.includes("\n"))) {
+        const preview = content.length > 100 ? `${content.substring(0, 100)}...` : content;
+        return (
+          <div className="long-text-field-cell">
+            <div className="long-text-preview">
+              <Icon version="v2" icon="Edit" size="small" className="text-icon" />
+              <span className="text-content">{preview}</span>
+              <Icon version="v2" icon="v2-CaretRight" size="small" className="text-arrow" />
+            </div>
+          </div>
+        );
+      }
+
+      if (typeof content === localeTexts?.FullPage?.constants?.object && content !== null) {
+        const keyCount = Object?.keys(content)?.length;
+        return (
+          <div className="object-value">
+            <span className="badge">{keyCount}</span>
+            <span className="array-preview">
+              {keyCount === 1
+                ? localeTexts?.FullPage?.constants?.fieldText?.field
+                : localeTexts?.FullPage?.constants?.fieldText?.fields}
+            </span>
+          </div>
+        );
+      }
+
+      return content?.toString() || "";
+    },
+    [getDataTypeFromSchema, contentTypeSchema]
+  );
+
+  const detectFieldType = (fieldConfig: any, value: any, fieldName?: string) => {
+    // First check schema if fieldName is provided
+    if (fieldName) {
+      const schemaDataType = getDataTypeFromSchema(fieldName, contentTypeSchema);
+      if (schemaDataType === "link") {
+        return "link";
+      }
     }
 
-    if (typeof content === localeTexts?.FullPage?.constants?.object && content !== null) {
-      const keyCount = Object?.keys(content)?.length;
-      return (
-        <div className="object-value">
-          <span className="badge">{keyCount}</span>
-          <span className="array-preview">
-            {keyCount === 1
-              ? localeTexts?.FullPage?.constants?.fieldText?.field
-              : localeTexts?.FullPage?.constants?.fieldText?.fields}
-          </span>
-        </div>
-      );
-    }
-
-    return content?.toString() || "";
-  }, []);
-
-  const detectFieldType = (fieldConfig: any, value: any) => {
     if (fieldConfig?.type?.type === localeTexts?.FullPage?.constants?.referenceText?.reference)
       return localeTexts?.FullPage?.constants?.referenceText?.reference;
     if (
@@ -348,6 +467,16 @@ const FullPageExtension: React.FC = () => {
       return localeTexts?.FullPage?.constants?.groupText?.group;
     if (fieldConfig?.type?.type === localeTexts?.FullPage?.constants?.blockText?.blocks)
       return localeTexts?.FullPage?.constants?.blockText?.blocks;
+
+    // Check if it's a link field
+    if (fieldConfig?.type?.type === "link" || fieldConfig?.type === "link") {
+      return "link";
+    }
+
+    // Check if it's a link object (has title and href properties)
+    if (value && typeof value === localeTexts?.FullPage?.constants?.object && "title" in value && "href" in value) {
+      return "link";
+    }
 
     // Check if it's a modular block array field
     if (Array?.isArray(value)) {
@@ -588,6 +717,7 @@ const FullPageExtension: React.FC = () => {
     {
       label: localeTexts?.FullPage?.table?.actions?.update?.label,
       icon: localeTexts?.FullPage?.table?.actions?.update?.icon,
+      disabled: isBulkUpdating,
       cb: (callbackData: any) => {
         const selectedIds = callbackData?.data?.map((item: any) => item?.id) || [];
 
@@ -601,6 +731,20 @@ const FullPageExtension: React.FC = () => {
         });
 
         if (selectedRows?.length > 0) {
+          // Set loading state for bulk update
+          setIsBulkUpdating(true);
+
+          // Show loading notification
+          Notification({
+            notificationContent: {
+              text: `Updating ${selectedRows?.length} ${selectedRows?.length === 1 ? "entry" : "entries"}...`,
+            },
+            notificationProps: {
+              autoClose: TIMEOUTS.autoClose,
+            },
+            type: "info",
+          });
+
           // Check if we have locale-specific data from FieldModal
           const hasLocaleData = Object.keys(allLocalesData).length > 0;
 
@@ -615,7 +759,7 @@ const FullPageExtension: React.FC = () => {
 
               // Check if the field is a reference field
               const fieldConfig = data?.[0]?.find((item: any) => item?.value === key);
-              const fieldType = detectFieldType(fieldConfig, value);
+              const fieldType = detectFieldType(fieldConfig, value, key);
 
               if (fieldType !== localeTexts?.FullPage?.constants?.referenceText?.reference) {
                 acc[key] = value;
@@ -692,6 +836,9 @@ const FullPageExtension: React.FC = () => {
                 },
                 type: localeTexts?.FullPage?.Notification?.error,
               });
+            })
+            .finally(() => {
+              setIsBulkUpdating(false);
             });
         }
 
@@ -701,6 +848,7 @@ const FullPageExtension: React.FC = () => {
     {
       label: localeTexts?.FullPage?.table?.actions?.updateAndPublish?.label,
       icon: localeTexts?.FullPage?.table?.actions?.updateAndPublish?.icon,
+      disabled: isBulkUpdating,
       cb: (callbackData: any) => {
         const selectedItems = callbackData?.data || [];
 
@@ -719,6 +867,20 @@ const FullPageExtension: React.FC = () => {
             envs: environments,
             locales: locales,
             handleUpdateAndPublish: (publish: boolean, envs: any[], langs: any[]) => {
+              // Set loading state for bulk publish
+              setIsBulkUpdating(true);
+
+              // Show loading notification
+              Notification({
+                notificationContent: {
+                  text: `Publishing ${selectedRows?.length} ${selectedRows?.length === 1 ? "entry" : "entries"}...`,
+                },
+                notificationProps: {
+                  autoClose: TIMEOUTS.autoClose,
+                },
+                type: "info",
+              });
+
               const result = selectedRows?.map((rowData: any) => {
                 return updateEntryData({
                   stack: appSdk?.stack,
@@ -758,6 +920,9 @@ const FullPageExtension: React.FC = () => {
                 .catch((error: any) => {
                   console.error("Publish error:", error);
                   setShowErrorMessage(["Failed to publish entries. Please try again."]);
+                })
+                .finally(() => {
+                  setIsBulkUpdating(false);
                 });
             },
           });
@@ -878,6 +1043,60 @@ const FullPageExtension: React.FC = () => {
           ?.join(" → ");
       };
 
+      const getFieldTypeIcon = (fieldConfig: any, fieldName: string): { icon: string; label: string } => {
+        // Check schema first
+        const schemaDataType = getDataTypeFromSchema(fieldName, contentTypeSchema);
+
+        // Map data types to icons and labels
+        if (schemaDataType === "link") {
+          return { icon: "Link", label: "Link" };
+        }
+        if (schemaDataType === "number") {
+          return { icon: "Number", label: "Number" };
+        }
+        if (schemaDataType === "boolean") {
+          return { icon: "CheckboxActive", label: "Boolean" };
+        }
+        if (schemaDataType === "isodate" || schemaDataType === "date") {
+          return { icon: "Calendar", label: "Date" };
+        }
+        if (schemaDataType === "file") {
+          return { icon: "Asset", label: "File" };
+        }
+        if (schemaDataType === "reference") {
+          return { icon: "v2-Reference", label: "Reference" };
+        }
+        if (schemaDataType === "group") {
+          return { icon: "Group", label: "Group" };
+        }
+        if (schemaDataType === "blocks") {
+          return { icon: "v2-ModularBlocks", label: "Blocks" };
+        }
+
+        // Check field config for display_type (dropdown/radio)
+        if (fieldConfig?.display_type === "dropdown") {
+          return { icon: "Dropdown", label: "Dropdown" };
+        }
+        if (fieldConfig?.display_type === "radio") {
+          return { icon: "RadioChecked", label: "Radio" };
+        }
+
+        // Check field config type
+        const fieldType = fieldConfig?.type?.type || fieldConfig?.type;
+        if (fieldType === "number") {
+          return { icon: "Number", label: "Number" };
+        }
+        if (fieldType === "boolean") {
+          return { icon: "CheckboxActive", label: "Boolean" };
+        }
+        if (fieldType === "file") {
+          return { icon: "Asset", label: "File" };
+        }
+
+        // Default to text
+        return { icon: "Edit", label: "Text" };
+      };
+
       const estimateColumnWidth = (item: any, index: number) => {
         let width = 350;
         const headerLength = item?.value?.length || 0;
@@ -912,9 +1131,17 @@ const FullPageExtension: React.FC = () => {
           const estimatedWidth = estimateColumnWidth(item, index);
           const fieldValue = item?.value;
 
+          const fieldTypeInfo = getFieldTypeIcon(item?.type, fieldValue);
+
           const commonProps = {
             Header: ({ column }: any = {}) => (
-              <div title={generateTooltip(fieldValue)}>{capitalizeFirstLetter(fieldValue)}</div>
+              <div
+                className="column-header-with-type"
+                title={`${generateTooltip(fieldValue)} (${fieldTypeInfo.label})`}>
+                {/* <Icon icon={fieldTypeInfo.icon} size="small" className="field-type-icon" /> */}
+                <span className="field-name">{capitalizeFirstLetter(fieldValue)}</span>
+                <span className="field-type-label">{fieldTypeInfo.label}</span>
+              </div>
             ),
             accessor: fieldValue,
             disableSortBy: true,
@@ -931,9 +1158,18 @@ const FullPageExtension: React.FC = () => {
             ...commonProps,
             Cell: ({ row }: any) => {
               const value = row?.original[fieldValue];
-              const fieldType = detectFieldType(item?.type, value);
+              const fieldType = detectFieldType(item?.type, value, fieldValue);
               const rowId = row?.original?.id;
               const isSelected = Array?.isArray(rowSelectionModel) && rowSelectionModel?.includes(rowId);
+
+              // Debug log for link fields
+              if (fieldType === "link") {
+                console.log(`[Table Cell] Link field "${fieldValue}":`, {
+                  value,
+                  rowData: row?.original,
+                  fieldType,
+                });
+              }
 
               if (fieldType === localeTexts?.FullPage?.constants?.fileText?.file) {
                 return (
@@ -951,10 +1187,22 @@ const FullPageExtension: React.FC = () => {
                 );
               }
 
+              // Check if text field is long enough to warrant a modal
+              const isLongTextField =
+                typeof value === "string" &&
+                (value.length > 100 || value.includes("\n")) &&
+                fieldType !== localeTexts?.FullPage?.constants?.fileText?.file;
+
               if (
                 fieldType === localeTexts?.FullPage?.constants?.referenceText?.reference ||
-                Array.isArray(value) ||
-                (typeof value === "object" && value !== null)
+                fieldType === "link" ||
+                fieldType === localeTexts?.FullPage?.constants?.groupText?.group ||
+                fieldType === localeTexts?.FullPage?.constants?.blockText?.blocks ||
+                isLongTextField ||
+                (Array.isArray(value) && fieldType !== localeTexts?.FullPage?.constants?.fileText?.file) ||
+                (typeof value === "object" &&
+                  value !== null &&
+                  fieldType !== localeTexts?.FullPage?.constants?.fileText?.file)
               ) {
                 return (
                   <div
@@ -964,6 +1212,12 @@ const FullPageExtension: React.FC = () => {
                         : ""
                     }`}
                     onClick={() => {
+                      console.log(`[Modal Opening] Field "${fieldValue}" clicked:`, {
+                        fieldValue,
+                        value,
+                        fieldType,
+                        rowId: row?.original?.id,
+                      });
                       setSelectedField({
                         field: fieldValue,
                         value: value,
@@ -972,7 +1226,7 @@ const FullPageExtension: React.FC = () => {
                       });
                       setShowFieldDialog(true);
                     }}>
-                    {renderCellContent(value, fieldType, item?.type)}
+                    {renderCellContent(value, fieldType, item?.type, fieldValue)}
                   </div>
                 );
               }
@@ -985,7 +1239,7 @@ const FullPageExtension: React.FC = () => {
                 <div className={`cell-content ${isSelected ? "selected-row" : ""}`}>
                   {isSelected && <div className="selected-row-indicator" />}
                   {isLocaleColumn ? (
-                    renderCellContent(value, fieldType, item?.type)
+                    renderCellContent(value, fieldType, item?.type, fieldValue)
                   ) : (
                     <EditableCell
                       value={value}
@@ -1006,6 +1260,8 @@ const FullPageExtension: React.FC = () => {
     },
     [renderCellContent, rowSelectionModel, setSelectedImage, setShowImageDialog, resizedColumnWidths, handleCellSave]
   );
+
+  console.log("Generating columns with data:", data);
 
   const venusColumns = React.useMemo(() => {
     return generateVenusColumns(data);
@@ -1352,7 +1608,8 @@ const FullPageExtension: React.FC = () => {
                 setData,
                 setReferenceData,
                 setLoading,
-                defaultLocale
+                defaultLocale,
+                setContentTypeSchema
               )
             }
             options={contentTypeOptions}
@@ -1397,7 +1654,8 @@ const FullPageExtension: React.FC = () => {
                 setData,
                 setReferenceData,
                 setLoading,
-                localeValue
+                localeValue,
+                setContentTypeSchema
               );
             }}
           />
@@ -1415,7 +1673,7 @@ const FullPageExtension: React.FC = () => {
           uniqueKey="uid"
           fetchTableData={fetchTableData}
           totalCounts={totalCounts}
-          loading={loading}
+          loading={loading || isBulkUpdating}
           rowPerPageOptions={[10, 30, 50, 100]}
           minBatchSizeToFetch={30}
           v2Features={{

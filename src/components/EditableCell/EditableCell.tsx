@@ -56,6 +56,11 @@ const EditableCell: React.FC<EditableCellProps> = ({
       fieldConfig?.display_type === "dropdown" ||
       (fieldConfig?.enum?.choices && Array.isArray(fieldConfig.enum.choices))
     ) {
+      console.log(`[EditableCell] Detected select field for "${fieldName}":`, {
+        display_type: fieldConfig?.display_type,
+        choices: fieldConfig?.enum?.choices,
+        fieldConfig,
+      });
       return "select";
     }
 
@@ -67,12 +72,10 @@ const EditableCell: React.FC<EditableCellProps> = ({
       if (hasIsoDate) return "date";
     }
 
-    // Check for direct date field
     if (fieldConfig?.data_type === "isodate" || fieldConfig?.data_type === "date" || fieldType === "date") {
       return "date";
     }
 
-    // Check if value looks like an ISO date string
     if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
       return "date";
     }
@@ -110,21 +113,22 @@ const EditableCell: React.FC<EditableCellProps> = ({
       if (specialType === "boolean") {
         setEditedValue(value === true || value === "true");
       } else if (specialType === "date") {
-        // Ensure valid date format
-        let dateValue = value;
+        let dateValue: string;
         if (value) {
           try {
             const parsedDate = new Date(value);
-            if (!isNaN(parsedDate.getTime())) {
-              dateValue = parsedDate.toISOString();
+            if (parsedDate && !isNaN(parsedDate.getTime())) {
+              dateValue = toISOStringLocal(parsedDate);
             } else {
-              dateValue = new Date().toISOString();
+              console.warn("Invalid date value on edit, using current date:", value);
+              dateValue = toISOStringLocal(new Date());
             }
-          } catch {
-            dateValue = new Date().toISOString();
+          } catch (error) {
+            console.error("Error parsing date on edit:", error);
+            dateValue = toISOStringLocal(new Date());
           }
         } else {
-          dateValue = new Date().toISOString();
+          dateValue = toISOStringLocal(new Date());
         }
         setEditedValue(dateValue);
       } else if (specialType === "select") {
@@ -143,16 +147,21 @@ const EditableCell: React.FC<EditableCellProps> = ({
     }
 
     if (fieldInputType === "date") {
-      // Ensure date is saved in ISO 8601 format: "2025-08-14T08:37:38.000Z"
-      let isoDate = editedValue;
+      // Ensure date is saved in ISO 8601 format: "2025-08-14T22:04:52.000Z" (preserves local time)
+      let isoDate: string;
       try {
         const dateObj = new Date(editedValue);
-        if (!isNaN(dateObj.getTime())) {
-          isoDate = dateObj.toISOString();
+        if (dateObj && !isNaN(dateObj.getTime())) {
+          isoDate = toISOStringLocal(dateObj);
+        } else {
+          // If date is invalid, use current date as fallback
+          console.warn("Invalid date value, using current date:", editedValue);
+          isoDate = toISOStringLocal(new Date());
         }
-      } catch {
+      } catch (error) {
         // If conversion fails, use current date
-        isoDate = new Date().toISOString();
+        console.error("Error converting date to ISO:", error);
+        isoDate = toISOStringLocal(new Date());
       }
       onSave?.(fieldName, isoDate, rowId);
       setIsEditing(false);
@@ -190,111 +199,156 @@ const EditableCell: React.FC<EditableCellProps> = ({
     setEditedValue(option?.value || option);
   };
 
+  // Helper function to convert date to ISO string preserving local time (no timezone conversion)
+  const toISOStringLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+    const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}Z`;
+  };
+
   const openDatePickerModal = () => {
     // Parse the current value to a Date object
-    let initialDate;
+    let initialDate: Date = new Date();
     try {
-      initialDate = editedValue ? new Date(editedValue) : new Date();
-      if (isNaN(initialDate.getTime())) {
-        initialDate = new Date();
+      if (editedValue) {
+        const parsedDate = new Date(editedValue);
+        if (!isNaN(parsedDate.getTime())) {
+          initialDate = parsedDate;
+        }
       }
-    } catch {
+    } catch (error) {
+      console.error("Error parsing initial date:", error);
       initialDate = new Date();
     }
 
-    // Store temporary date value within modal scope
-    let tempDateValue = editedValue || new Date().toISOString();
+    // Use state to track the selected date within the modal
+    const ModalContent = (props: { closeModal: () => void }) => {
+      const [selectedDate, setSelectedDate] = useState<Date>(() => {
+        // Ensure we always have a valid date
+        return initialDate && !isNaN(initialDate.getTime()) ? initialDate : new Date();
+      });
 
-    cbModal({
-      component: (props: { closeModal: () => void }) => (
+      // Handle DateTimePicker date change
+      const handleDateChange = useCallback((date: any) => {
+        if (!date) return;
+
+        try {
+          let dateObj: Date;
+
+          if (date instanceof Date) {
+            dateObj = date;
+          } else if (typeof date === "string" || typeof date === "number") {
+            dateObj = new Date(date);
+          } else {
+            return;
+          }
+
+          if (dateObj && !isNaN(dateObj.getTime()) && dateObj.getTime() > 0) {
+            setSelectedDate(dateObj);
+          }
+        } catch (error) {
+          console.error("Date conversion error:", error);
+        }
+      }, []);
+
+      // Handle Apply button click and internal Done button - Auto-save to table
+      const handleApply = useCallback(() => {
+        try {
+          if (selectedDate instanceof Date && !isNaN(selectedDate.getTime())) {
+            const isoString = toISOStringLocal(selectedDate);
+            // Save directly to table
+            onSave(fieldName, isoString, rowId);
+            setIsEditing(false);
+            props.closeModal();
+          } else {
+            const fallbackIso = toISOStringLocal(new Date());
+            onSave(fieldName, fallbackIso, rowId);
+            setIsEditing(false);
+            props.closeModal();
+          }
+        } catch (error) {
+          console.error("Error converting date to ISO:", error);
+          const fallbackIso = toISOStringLocal(new Date());
+          onSave(fieldName, fallbackIso, rowId);
+          setIsEditing(false);
+          props.closeModal();
+        }
+      }, [selectedDate, props, onSave, fieldName, rowId, setIsEditing]);
+
+      // Handle DateTimePicker's internal done button - Auto-save to table
+      const handleDone = useCallback(
+        (date?: any) => {
+          // Update state if a date is passed
+          if (date) {
+            try {
+              let dateObj: Date;
+              if (date instanceof Date) {
+                dateObj = date;
+              } else {
+                dateObj = new Date(date);
+              }
+              if (dateObj && !isNaN(dateObj.getTime()) && dateObj.getTime() > 0) {
+                // Save directly to table (preserve local time)
+                const isoString = toISOStringLocal(dateObj);
+                onSave(fieldName, isoString, rowId);
+                setIsEditing(false);
+                props.closeModal();
+                return;
+              }
+            } catch (error) {
+              console.error("Error in handleDone:", error);
+            }
+          }
+          // Fallback to using current selectedDate via handleApply
+          handleApply();
+        },
+        [handleApply, props, onSave, fieldName, rowId, setIsEditing]
+      );
+
+      return (
         <>
-          <ModalHeader title={`Select Date for ${fieldName}`} closeModal={props.closeModal} />
+          <ModalHeader title={`Select Date and Time for ${fieldName}`} closeModal={props.closeModal} />
           <ModalBody className="date-picker-modal-body">
             <div className="date-picker-modal-content">
               <DateTimePicker
-                id={`date-modal-${sanitizeFieldName(fieldName)}-${rowId}`}
-                value={initialDate}
-                onChange={(date: any) => {
-                  // Convert to ISO format immediately and store temporarily
-                  if (date !== null && date !== undefined) {
-                    try {
-                      let dateObj;
-
-                      // Handle different date formats
-                      if (date instanceof Date) {
-                        dateObj = date;
-                      } else if (typeof date === "string") {
-                        dateObj = new Date(date);
-                      } else if (typeof date === "number") {
-                        dateObj = new Date(date);
-                      } else {
-                        dateObj = new Date();
-                      }
-
-                      // Validate the date
-                      if (!isNaN(dateObj.getTime())) {
-                        tempDateValue = dateObj.toISOString();
-                        setEditedValue(tempDateValue);
-                      } else {
-                        console.warn("Invalid date received:", date);
-                        tempDateValue = new Date().toISOString();
-                        setEditedValue(tempDateValue);
-                      }
-                    } catch (error) {
-                      console.error("Date conversion error:", error);
-                      tempDateValue = new Date().toISOString();
-                      setEditedValue(tempDateValue);
-                    }
-                  }
-                }}
+                key={selectedDate.getTime()}
+                initialDate={selectedDate}
+                onChange={handleDateChange}
+                onDone={handleDone}
                 version="v2"
                 dateFormat="DD/MM/YYYY"
                 timeFormat="HH:mm"
-                showTimeSelect
-                inline
+                showTimeSelect={true}
+                inline={true}
               />
             </div>
           </ModalBody>
           <ModalFooter>
             <ButtonGroup>
-              <Button
-                version="v2"
-                buttonType="light"
-                onClick={() => {
-                  props.closeModal();
-                  // Restore original value on cancel
-                  setEditedValue(editedValue);
-                }}
-                size="small">
+              <Button version="v2" buttonType="light" onClick={props.closeModal} size="small">
                 Cancel
               </Button>
-              <Button
-                version="v2"
-                buttonType="primary"
-                onClick={() => {
-                  // Ensure we have a valid ISO date before closing
-                  try {
-                    const finalDate = new Date(tempDateValue);
-                    if (!isNaN(finalDate.getTime())) {
-                      setEditedValue(finalDate.toISOString());
-                    }
-                  } catch (error) {
-                    console.error("Error setting final date:", error);
-                    setEditedValue(new Date().toISOString());
-                  }
-                  props.closeModal();
-                }}
-                size="small">
+              <Button version="v2" buttonType="primary" onClick={handleApply} size="small">
                 Apply
               </Button>
             </ButtonGroup>
           </ModalFooter>
         </>
-      ),
+      );
+    };
+
+    cbModal({
+      component: ModalContent,
       modalProps: {
         className: "date-picker-modal",
         modalWidth: "medium",
-        shouldCloseOnOverlayClick: true,
+        shouldCloseOnOverlayClick: false,
         closeOnEscapeKey: true,
       },
     });
@@ -360,6 +414,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
               styles={{
                 menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
               }}
+              className="select-option-menu"
             />
           </div>
         ) : (

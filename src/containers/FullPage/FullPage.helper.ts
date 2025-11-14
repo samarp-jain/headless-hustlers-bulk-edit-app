@@ -151,16 +151,29 @@ const validateHeadersAndHeaderTypes = (headers: string[], schema: any, headerTyp
           headerTypes?.push?.({
             type: FIELDTYPES?.singleSelectType,
             options: item?.enum?.choices?.map?.((choice: any) => choice?.value),
+            display_type: item?.display_type,
+            enum: item?.enum,
+            data_type: item?.data_type,
           });
           return true;
         } else if (item?.enum && item?.multiple === true) {
           headerTypes?.push?.({
             type: FIELDTYPES?.multiSelectType,
             options: item?.enum?.choices?.map?.((choice: any) => choice?.value),
+            display_type: item?.display_type,
+            enum: item?.enum,
+            data_type: item?.data_type,
           });
           return true;
         }
-        headerTypes?.push?.(validateHeaderTypes(item?.data_type));
+        // Include full schema details for all field types
+        const fieldTypeInfo = validateHeaderTypes(item?.data_type);
+        headerTypes?.push?.({
+          type: fieldTypeInfo,
+          data_type: item?.data_type,
+          display_type: item?.display_type,
+          enum: item?.enum,
+        });
         return true;
       } else if (item?.data_type === FIELDTYPES?.groupType) {
         const groupSchema = item?.schema;
@@ -462,7 +475,8 @@ export const handleContentTypeChange = async (
   setData: React.Dispatch<React.SetStateAction<any[]>>,
   setReferenceData: React.Dispatch<React.SetStateAction<any>>,
   setLoading: React.Dispatch<React.SetStateAction<boolean>>,
-  defaultLocale: any
+  defaultLocale: any,
+  setContentTypeSchema?: React.Dispatch<React.SetStateAction<any[]>>
 ) => {
   setSelectedContentType(selectedOption);
   setLoading(true);
@@ -475,6 +489,11 @@ export const handleContentTypeChange = async (
       .addQuery("include_count", "true")
       .includeSchema()
       .find?.();
+
+    // Store the schema if setter is provided
+    if (setContentTypeSchema && entry?.schema) {
+      setContentTypeSchema(entry.schema);
+    }
 
     // Extract both reference and global fields
     const referenceFields = extractReferenceFields(entry?.schema || []);
@@ -727,6 +746,17 @@ export const handleContentTypeChange = async (
       if (obj._content_type_uid && obj.uid) {
         result[prefix] = { ...obj };
         return result;
+      }
+
+      // Handle link fields - keep them as objects with title and href/url properties
+      if (prefix && obj && typeof obj === "object" && ("title" in obj || "href" in obj || "url" in obj)) {
+        // Check if this looks like a link field (has title and/or href/url, but no other complex properties)
+        const keys = Object.keys(obj);
+        const isLinkField = keys.every(key => ["title", "href", "url"].includes(key));
+        if (isLinkField && keys.length <= 3) {
+          result[prefix] = { ...obj };
+          return result;
+        }
       }
 
       if (Array?.isArray?.(obj) && prefix?.includes?.(FIELDTYPES?.modularBlocksType)) {

@@ -1,0 +1,111 @@
+@import "../../components/CustomTable/styles.scss";
+@import "../../components/NestedFieldTable/styles.scss";
+
+.page-modal-wrapper {
+  width: calc(80vw - 100px);
+  height: calc(80vh - 30px);
+  border-radius: 10px;
+  overflow: hidden;
+
+  .modal-body {
+    height: calc(100% - 60px); /* Subtract header height */
+    display: flex;
+    flex-direction: column;
+
+    .modal-header {
+      padding: 1rem 1rem 1rem 2rem;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      flex-shrink: 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-header-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 1rem 2rem 1rem 2rem;
+      align-items: center;
+      border-bottom: 1px solid #e5e7eb;
+      flex-shrink: 0;
+
+      .save-fields-btn {
+        min-width: 120px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+      }
+    }
+  }
+
+  .Table {
+    min-height: 10px !important;
+    border-top: 1px solid #edf1f7 !important;
+    height: 60vh !important;
+    overflow: hidden !important;
+
+    & .Table__body {
+      scroll-margin: 0 !important;
+      overflow-y: scroll !important;
+      height: 45vh !important;
+      @media (max-width: 1330px) {
+        height: 41vh !important;
+      }
+
+      .Table__body__row {
+        height: 60px !important;
+
+        .tippy-wrapper {
+          overflow: hidden !important;
+          display: inline-block !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          max-width: 100% !important;
+        }
+
+        .ActionTooltip {
+          width: 98% !important;
+        }
+      }
+    }
+  }
+}
+
+.Table .Table__body__column,
+.Table .Table__head__column {
+  border-right: 1px solid #dde3ee;
+}
+
+.TablePanel__list-count.flex-v-center {
+  padding-left: 12px;
+}
+
+.nested-fields-container {
+  margin: 0 1rem 1rem 1rem;
+  height: calc(100% - 80px);
+  display: flex;
+  flex-direction: column;
+
+  &.nested-fields-container--compact {
+    margin: 0 0.5rem 0.5rem 0.5rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .page-modal-wrapper {
+    width: calc(95vw - 50px);
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-modal-wrapper {
+    width: calc(100vw - 20px);
+    min-width: 400px;
+  }
+}
+
+.modal-config-wrapper {
+  margin-top: 30px;
+  height: calc(80vh - 30px);
+}
