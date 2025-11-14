@@ -1,0 +1,309 @@
+.hierarchical-field-table {
+  width: 100%;
+  height: 100%;
+
+  .custom-table-container {
+    .field-name-cell {
+      padding-left: 2rem !important;
+      padding-right: 1rem !important;
+      position: relative;
+      overflow-x: auto;
+      overflow-y: visible;
+      max-width: 100%;
+      min-width: 200px;
+      min-height: 1rem;
+
+      &::-webkit-scrollbar {
+        height: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #d1d8dd;
+        border-radius: 3px;
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background: #b8c1cc;
+      }
+    }
+  }
+
+  .field-count-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #d1d8dd;
+    border-top: 1px solid #d1d8dd;
+
+    .field-count-text {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475161;
+    }
+  }
+
+  .header-checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+
+    .header-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475161;
+      white-space: nowrap;
+    }
+
+    .Checkbox {
+      align-items: center;
+      padding-top: 1rem;
+    }
+  }
+
+  .field-hierarchy-container {
+    width: max-content;
+    min-width: max-content;
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 3rem;
+    padding-right: 2rem;
+
+    .ancestor-vertical-line {
+      position: absolute;
+      top: -2rem;
+      width: 1px;
+      background-color: #d1d8dd;
+      z-index: 1;
+
+      &.extend {
+        height: calc(100% + 4rem);
+      }
+
+      &.stop {
+        height: calc(50% + 2rem);
+      }
+    }
+  }
+
+  .hierarchy-chevron-icon {
+    position: absolute;
+    left: -1.75rem;
+
+    &.level-1 {
+      left: -0.1rem;
+    }
+
+    &.level-2 {
+      left: 1.3rem;
+    }
+
+    &.level-3 {
+      left: 2.4rem;
+    }
+
+    &.level-4 {
+      left: 3.5rem;
+    }
+  }
+
+  .hierarchical-field-name {
+    display: flex;
+    align-items: center;
+    position: relative;
+    white-space: nowrap;
+    min-width: max-content;
+    margin-bottom: 0.25rem;
+
+    &.dynamic-level {
+      &:not([style*="padding-left: 0rem"]) {
+        &::after {
+          content: "";
+          position: absolute;
+          left: var(--vertical-line-left, -1.75rem);
+          top: 50%;
+          width: var(--horizontal-line-width, 1rem);
+          background-color: #d1d8dd;
+          z-index: 2;
+        }
+      }
+
+      &[style*="--level: 0"] {
+        &::after {
+          display: none;
+        }
+      }
+    }
+
+    .hierarchy-chevron {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #000 !important;
+      cursor: pointer;
+      transition: transform 0.1s ease-in-out;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+
+      svg {
+        color: #000 !important;
+      }
+
+      &.expanded {
+        transform: translateY(-50%) rotate(90deg);
+      }
+
+      &.collapsed {
+        transform: translateY(-50%) rotate(0deg);
+      }
+
+      &:hover {
+        background-color: rgba(59, 130, 246, 0.1);
+        border-radius: 2px;
+      }
+    }
+
+    .field-checkbox-container {
+      display: flex;
+      align-items: center;
+      position: relative;
+      white-space: nowrap;
+      min-width: max-content;
+
+      .field-label-text {
+        white-space: nowrap;
+      }
+
+      .Checkbox__label {
+        white-space: nowrap;
+
+        & > div {
+          white-space: nowrap;
+        }
+      }
+    }
+  }
+
+  .custom-table-row {
+    &:hover {
+      background-color: transparent !important;
+    }
+  }
+
+  .custom-table-row-container {
+    position: relative;
+    border-bottom: none !important;
+
+    &:last-child {
+      border-bottom: 1px solid #d1d8dd !important;
+    }
+  }
+}
+
+@media (max-width: 1200px) {
+  .hierarchical-field-table {
+    .custom-table-container {
+      .field-name-cell {
+        max-width: 100%;
+        min-width: 180px;
+      }
+    }
+
+    .field-count-header {
+      padding: 0.75rem 0.5rem;
+    }
+
+    .hierarchical-field-name {
+      &.level-1 {
+        padding-left: 2rem !important;
+      }
+
+      &.level-2 {
+        padding-left: 3rem !important;
+      }
+
+      &.level-3 {
+        padding-left: 3.5rem !important;
+      }
+
+      &.level-4 {
+        padding-left: 4rem !important;
+      }
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .hierarchical-field-table {
+    .custom-table-container {
+      .field-name-cell {
+        min-width: 160px;
+      }
+    }
+
+    .field-count-header {
+      padding: 0.5rem;
+    }
+
+    .field-checkbox-container {
+      margin-left: 0.5rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .hierarchical-field-table {
+    .custom-table-container {
+      .field-name-cell {
+        max-width: 100%;
+        min-width: 140px;
+      }
+    }
+
+    .field-count-header {
+      padding: 0.5rem 0.25rem;
+
+      .field-count-text {
+        font-size: 0.75rem;
+      }
+    }
+
+    .hierarchical-field-name {
+      &.level-1 {
+        padding-left: 1.5rem !important;
+      }
+
+      &.level-2 {
+        padding-left: 2rem !important;
+      }
+
+      &.level-3 {
+        padding-left: 2.5rem !important;
+      }
+
+      &.level-4 {
+        padding-left: 3rem !important;
+      }
+    }
+
+    .nested-children::before {
+      display: none;
+    }
+
+    .field-checkbox-container {
+      margin-left: 0.25rem;
+    }
+
+    .field-name-wrapper {
+      font-size: 0.75rem;
+    }
+  }
+}

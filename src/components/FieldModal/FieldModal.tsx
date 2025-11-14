@@ -27,6 +27,14 @@ const FieldModal: React.FC<IFieldModalProps> = ({
   const [localReferenceData, setLocalReferenceData] = useState<any>(parentReferenceData || null);
   const textAreaRowsCount = 5;
 
+  // Debug log when modal opens
+  console.log("[FieldModal] Opened with selectedField:", {
+    field: selectedField?.field,
+    type: selectedField?.type,
+    value: selectedField?.value,
+    rowId: selectedField?.rowId,
+  });
+
   useEffect(() => {
     if (parentReferenceData) {
       setLocalReferenceData(parentReferenceData);
@@ -139,6 +147,151 @@ const FieldModal: React.FC<IFieldModalProps> = ({
   };
 
   const renderFieldValue = (value: any, depth = 0, parentKey = "", currentPath = "") => {
+    // Handle simple string/text fields (for long text editing)
+    if (depth === 0 && typeof value === "string" && selectedField?.type !== "link") {
+      const isLongText = value.length > 100 || value.includes("\n");
+      const rows = isLongText ? 10 : 3;
+
+      if (isEditing && editedValue?.key === "text" && editedValue?.path === currentPath) {
+        return (
+          <div className="field-edit-container">
+            <Textarea
+              id="text-field"
+              value={editedValue?.value}
+              onChange={(e: any) => {
+                onEdit("text", e.target.value, currentPath);
+              }}
+              className="field-edit-input"
+              autoFocus
+              rows={rows}
+              version="v2"
+            />
+            <div className="field-edit-actions">
+              <Button
+                version="v2"
+                buttonType="primary"
+                onClick={() => onSave(currentPath)}
+                icon={localeTexts.Icons.update}>
+                {localeTexts.FullPage.FieldDialog.button.updateButton}
+              </Button>
+              <Button version="v2" buttonType="secondary" onClick={onCancelEdit} icon={localeTexts.Icons.cancel}>
+                {localeTexts.FullPage.FieldDialog.button.cancelButton}
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="text-field-display">
+          <pre className="text-field-value">{value}</pre>
+          <Button
+            version="v2"
+            buttonType="tertiary"
+            onClick={() => onEdit("text", value, currentPath)}
+            icon={localeTexts.Icons.edit}
+            className="edit-button">
+            Edit Text
+          </Button>
+        </div>
+      );
+    }
+
+    // Handle link field type - check type first, before value checks
+    if (selectedField?.type === "link") {
+      // Handle null, undefined, or empty link values - always show editing interface for link fields
+      const linkValue = value && typeof value === "object" && value !== null ? value : { title: "", href: "" };
+      const linkTitle = linkValue?.title || "";
+      const linkHref = linkValue?.href || linkValue?.url || "";
+
+      console.log("[FieldModal] Rendering link field:", { value, linkTitle, linkHref, isEditing, editedValue });
+
+      if (isEditing && editedValue?.key === "link") {
+        const hrefEmpty = !editedValue?.value?.href || editedValue?.value?.href?.toString().trim() === "";
+
+        return (
+          <div className="link-field-edit-container">
+            <div className="link-field-group">
+              <label className="link-field-label">Title:</label>
+              <Textarea
+                id="link-title"
+                value={editedValue?.value?.title || ""}
+                onChange={(e: any) => {
+                  onEdit(
+                    "link",
+                    {
+                      title: e?.target?.value,
+                      href: editedValue?.value?.href || linkHref,
+                    },
+                    currentPath
+                  );
+                }}
+                className="field-edit-input"
+                rows={2}
+                version="v2"
+              />
+            </div>
+            <div className="link-field-group">
+              <label className="link-field-label">URL:</label>
+              <Textarea
+                id="link-href"
+                value={editedValue?.value?.href || ""}
+                onChange={(e: any) => {
+                  onEdit(
+                    "link",
+                    {
+                      title: editedValue?.value?.title || linkTitle,
+                      href: e?.target?.value,
+                    },
+                    currentPath
+                  );
+                }}
+                className="field-edit-input"
+                rows={2}
+                error={hrefEmpty ? "URL is required" : ""}
+                version="v2"
+              />
+            </div>
+            <div className="field-edit-actions">
+              <Button
+                version="v2"
+                buttonType="primary"
+                onClick={() => onSave(currentPath)}
+                icon={localeTexts.Icons.update}
+                disabled={hrefEmpty}>
+                {localeTexts.FullPage.FieldDialog.button.updateButton}
+              </Button>
+              <Button version="v2" buttonType="secondary" onClick={onCancelEdit} icon={localeTexts.Icons.cancel}>
+                {localeTexts.FullPage.FieldDialog.button.cancelButton}
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="link-field-display">
+          <div className="link-field-item">
+            <strong className="link-field-label">Title:</strong>
+            <span className="link-field-value">{linkTitle || "(Empty)"}</span>
+          </div>
+          <div className="link-field-item">
+            <strong className="link-field-label">URL:</strong>
+            <span className="link-field-value">{linkHref || "(Empty)"}</span>
+          </div>
+          <Button
+            version="v2"
+            buttonType="tertiary"
+            onClick={() => onEdit("link", { title: linkTitle, href: linkHref }, currentPath)}
+            icon={localeTexts.Icons.edit}
+            className="edit-button">
+            Edit Link
+          </Button>
+        </div>
+      );
+    }
+
+    // Handle null/undefined for non-link fields
     if (value === null || value === undefined) return "null";
 
     if (
@@ -381,6 +534,7 @@ const FieldModal: React.FC<IFieldModalProps> = ({
                   {selectedField?.referenceTitle ? ` - ${selectedField?.referenceTitle}` : ""})
                 </span>
               )}
+              {selectedField?.type === "link" && <span className="field-type-label">(Link Field)</span>}
             </h3>
           </div>
           {!isEditing && (
@@ -393,8 +547,10 @@ const FieldModal: React.FC<IFieldModalProps> = ({
         <div className="field-dialog-footer">
           <Icon icon="InformationSmallPurple" />
           <span>
-            {selectedField?.type === FIELDTYPES.referenceType ||
-            (selectedField?.value?.uid && selectedField?.value?._content_type_uid)
+            {selectedField?.type === "link"
+              ? "Double-click on the field values or click the Edit button to modify the link title and URL."
+              : selectedField?.type === FIELDTYPES.referenceType ||
+                (selectedField?.value?.uid && selectedField?.value?._content_type_uid)
               ? localeTexts.FullPage.FieldDialog.referencedBody
               : localeTexts.FullPage.FieldDialog.body}{" "}
           </span>

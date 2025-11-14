@@ -5,13 +5,13 @@ import ContentstackAppSdk from "@contentstack/app-sdk";
 import debounce from "lodash/debounce";
 import { mergeObjects } from "../../common/utils";
 import { IMapperConfig, TypeSelectOption } from "../../common/types";
-import FieldSelector from "../../components/Mapper/FieldSelector/FieldSelector";
 import MapperModal from "../../components/Mapper/MapperModal/MapperModal";
 import localeTexts from "../../common/locales/en-us";
 import { FIELDTYPES, TIMEOUTS } from "../../common/constants";
 import "@contentstack/venus-components/build/main.css";
 import "./AppConfiguration.module.scss";
 import DeleteModal from "../../components/DeleteModal/DeleteModal";
+import ContentModelSettingsModal from "../../components/ContentModelSettingsModal";
 
 const AppConfigurationExtension: React.FC = function () {
   const [state, setState] = useState<any>({
@@ -43,6 +43,7 @@ const AppConfigurationExtension: React.FC = function () {
   const [includeAssets, setIncludeAssets] = useState<boolean>(false);
   const [isMapperModalOpen, setIsMapperModalOpen] = useState<boolean>(false);
   const [defaultKey, setDefaultKey] = useState<string>("");
+  const [expandedFieldPreviews, setExpandedFieldPreviews] = useState<Record<string, boolean>>({});
   useEffect(() => {
     const initializeAppSdk = async () => {
       try {
@@ -321,6 +322,72 @@ const AppConfigurationExtension: React.FC = function () {
     }
   };
 
+  const handleOpenFieldsModal = async (contentType: string) => {
+    // Fetch the schema for the content type
+    try {
+      const contentTypeSchema = await state?.appSdk?.stack?.getContentType?.(contentType, {
+        include_global_field_schema: true,
+      });
+
+      cbModal({
+        component: (props: any) => {
+          // Create a temporary state structure for the modal
+          const modalState = {
+            installationData: {
+              configuration: {
+                ...state?.installationData?.configuration,
+                manageFields: [
+                  {
+                    contentType: contentType,
+                    selectedFieldsUID: state?.installationData?.configuration?.mapper?.[contentType] || [],
+                    isEnabled: true,
+                    extraFields: [],
+                  },
+                ],
+                excludeKeys: {},
+                excludedFieldTypes: [],
+              },
+            },
+            setInstallationData: async (updatedData: any) => {
+              // Extract the selected fields from the manageFields structure
+              const manageFieldsEntry = updatedData?.configuration?.manageFields?.find?.(
+                (entry: any) => entry?.contentType === contentType
+              );
+
+              if (manageFieldsEntry) {
+                // Update the mapper with the selected fields
+                handleFieldsChange(contentType, manageFieldsEntry?.selectedFieldsUID || []);
+              }
+
+              // Don't call the main setInstallationData here,
+              // as handleFieldsChange already does the update
+            },
+          };
+
+          return (
+            <ContentModelSettingsModal
+              contentTypes={[
+                {
+                  label: contentType,
+                  value: contentType,
+                },
+              ]}
+              closeModal={props.closeModal}
+              state={modalState}
+              appSDK={state?.appSdk}
+              fieldTypesToExclude={[]}
+            />
+          );
+        },
+        modalProps: {
+          size: "customSize",
+        },
+      });
+    } catch (error) {
+      console.error("Error opening fields modal:", error);
+    }
+  };
+
   return (
     <>
       <div className="appConfigurationHeader">
@@ -348,10 +415,11 @@ const AppConfigurationExtension: React.FC = function () {
               <div className="info-banner">
                 <Icon icon="InformationCircle" size="small" version="v2" className="info-icon" />
                 <div className="info-content">
-                  <p className="info-title">Getting Started</p>
+                  <p className="info-title">Getting Started:- </p>
                   <p className="info-description">
-                    Add content types below and select the fields you want to make editable. At least one content type
-                    with selected fields is required to enable the bulk update feature.
+                    Add content types below and click the "Manage Fields" button to select which fields you want to make
+                    editable in bulk. At least one content type with selected fields is required to enable the bulk
+                    update feature.
                   </p>
                 </div>
               </div>
@@ -423,12 +491,59 @@ const AppConfigurationExtension: React.FC = function () {
                           },
                         },
                       ]}>
-                      <FieldSelector
-                        contentType={contentType}
-                        selectedFields={fields}
-                        availableFields={contentSchemaOptions?.[contentType] || []}
-                        onFieldsChange={(updatedFields) => handleFieldsChange(contentType, updatedFields)}
-                      />
+                      <div className="field-management-section">
+                        <div className="field-info">
+                          <div className="field-stats">
+                            <Icon icon="CheckedBox" size="small" version="v2" className="stats-icon" />
+                            <span className="stats-text">
+                              {fields?.length} field{fields?.length !== 1 ? "s" : ""} selected
+                            </span>
+                          </div>
+                          {fields?.length > 0 && (
+                            <div className="selected-fields-preview">
+                              {(expandedFieldPreviews[contentType] ? fields : fields?.slice(0, 3))?.map(
+                                (field, idx) => (
+                                  <span key={idx} className="field-tag">
+                                    {field}
+                                  </span>
+                                )
+                              )}
+                              {fields?.length > 3 && !expandedFieldPreviews[contentType] && (
+                                <span
+                                  className="field-tag more-fields clickable"
+                                  onClick={() =>
+                                    setExpandedFieldPreviews({
+                                      ...expandedFieldPreviews,
+                                      [contentType]: true,
+                                    })
+                                  }>
+                                  +{fields?.length - 3} more
+                                </span>
+                              )}
+                              {expandedFieldPreviews[contentType] && fields?.length > 3 && (
+                                <span
+                                  className="field-tag show-less clickable"
+                                  onClick={() =>
+                                    setExpandedFieldPreviews({
+                                      ...expandedFieldPreviews,
+                                      [contentType]: false,
+                                    })
+                                  }>
+                                  Show less
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          className="manage-fields-btn"
+                          icon="ContentModelsMediumActive"
+                          buttonType="secondary"
+                          onClick={() => handleOpenFieldsModal(contentType)}
+                          size="small">
+                          Manage Fields
+                        </Button>
+                      </div>
                     </Accordion>
                   </div>
                 ))}

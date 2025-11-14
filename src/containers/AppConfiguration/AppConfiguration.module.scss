@@ -465,6 +465,91 @@
       font-weight: normal;
     }
   }
+
+  .field-management-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+
+    .field-info {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .field-stats {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .stats-icon {
+          color: #10b981;
+        }
+
+        .stats-text {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+        }
+      }
+
+      .selected-fields-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .field-tag {
+          display: inline-block;
+          padding: 4px 10px;
+          background-color: #f3f4f6;
+          border: 1px solid #e5e7eb;
+          border-radius: 4px;
+          font-size: 12px;
+          color: #4b5563;
+          font-weight: 500;
+          transition: all 0.2s ease;
+
+          &.more-fields {
+            background-color: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+          }
+
+          &.show-less {
+            background-color: #6366f1;
+            color: white;
+            border-color: #6366f1;
+          }
+
+          &.clickable {
+            cursor: pointer;
+            user-select: none;
+
+            &:hover {
+              transform: translateY(-1px);
+              box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+            }
+
+            &:active {
+              transform: translateY(0);
+            }
+          }
+        }
+      }
+    }
+
+    .manage-fields-btn {
+      align-self: flex-start;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+      }
+    }
+  }
 }
 
 .remove-modal-wrapper {

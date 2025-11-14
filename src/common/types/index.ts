@@ -229,3 +229,24 @@ export interface IAssetCellProps {
   fieldName: string;
   onView: () => void;
 }
+
+export interface ContentModelSetting {
+  contentType: string;
+  selectedFieldsUID: string[];
+  isEnabled?: boolean;
+  extraFields?: string[];
+}
+
+export interface ManageFieldSetting {
+  contentType: string;
+  selectedFieldsUID: string[];
+  isEnabled?: boolean;
+  extraFields?: string[];
+}
+
+export interface TypePopupWindowDetails {
+  url: string;
+  title: string;
+  w: number;
+  h: number;
+}

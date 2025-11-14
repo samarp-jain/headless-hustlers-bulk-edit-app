@@ -148,6 +148,11 @@
     width: 100%;
     margin-bottom: 8px;
 
+    .select-option-menu {
+      min-width: 190px !important;
+      max-width: 190px !important;
+    }
+
     :global {
       .Select__control {
         min-height: 36px;
